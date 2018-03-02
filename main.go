@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"os"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -30,15 +31,11 @@ func main() {
 		conn, err = grpc.Dial(address, grpc.WithInsecure())
 	} else {
 		clientCreds, err = credentials.NewClientTLSFromFile(certFile, "")
-		if err != nil {
-			panic(err)
-		}
+		fail("tls initialization failed", err)
 
 		conn, err = grpc.Dial(address, grpc.WithTransportCredentials(clientCreds))
 	}
-	if err != nil {
-		panic(err)
-	}
+	fail("connection cannot be established", err)
 
 	client := healthpb.NewHealthClient(conn)
 
@@ -48,9 +45,14 @@ func main() {
 	resp, err := client.Check(ctx, &healthpb.HealthCheckRequest{
 		Service: service,
 	})
-	if err != nil {
-		panic(err)
-	}
+	fail("health check request failed", err)
 
 	fmt.Println(resp.String())
+}
+
+func fail(msg string, err error) {
+	if err != nil {
+		fmt.Println(msg + ": " + err.Error())
+		os.Exit(1)
+	}
 }
